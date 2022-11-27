@@ -18,9 +18,9 @@ class FastIMApp extends StatelessWidget {
 
       theme: ThemeData(
           fontFamily: 'segoeui',
-          appBarTheme: const AppBarTheme(
-            backgroundColor: Colors.white,
-            foregroundColor: Colors.green,
+          appBarTheme: AppBarTheme(
+            backgroundColor: Colors.grey[800],
+            foregroundColor: Colors.white,
           ),
           floatingActionButtonTheme: const FloatingActionButtonThemeData(
             backgroundColor: Colors.green,
@@ -48,29 +48,35 @@ class _MyHomePageState extends State<MyHomePage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Colors.grey[900],
       appBar: AppBar(
-        toolbarHeight: 40,
-        title: Text(widget.title, style: const TextStyle(fontSize: 16)),
+        toolbarHeight: 36,
+        title: Text(widget.title, style: const TextStyle(fontSize: 14)),
       ),
       body: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
         // for search bar and buttons
         Padding(
           padding: const EdgeInsets.all(0),
           child: Container(
-            color: Colors.green[200],
-            padding: const EdgeInsets.only(top: 30, bottom: 20),
+            color: Colors.grey[850],
+            padding: const EdgeInsets.only(top: 15, bottom: 10),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 const SizedBox(width: 500, child: SearchBar()),
                 Padding(
-                  padding: const EdgeInsets.all(8.0),
+                  padding: const EdgeInsets.only(left: 10),
                   child: ElevatedButton(
                     style: ButtonStyle(
-                        padding: MaterialStateProperty.all(EdgeInsets.all(20)),
                         backgroundColor:
-                            MaterialStateProperty.all(Colors.green[400])),
-                    child: const Text('search', style: TextStyle(fontSize: 16)),
+                            MaterialStateProperty.all(Colors.green),
+                        visualDensity: VisualDensity.comfortable,
+                        padding: MaterialStateProperty.all(
+                            const EdgeInsets.all(12))),
+                    child: const Text(
+                      'search',
+                      style: TextStyle(fontSize: 16),
+                    ),
                     onPressed: () {},
                   ),
                 ),
@@ -82,13 +88,20 @@ class _MyHomePageState extends State<MyHomePage> {
 
         Expanded(
           child: ListView(
+            padding:
+                const EdgeInsets.only(left: 50, right: 50, top: 20, bottom: 20),
             children: [
-              ListTile(
-                tileColor: Colors.grey[350],
-                title: Text('IMG0000012345'),
-              ),
-              ListTile(
-                title: Text('IMG0000012345'),
+              Padding(
+                padding: const EdgeInsets.only(bottom: 10),
+                child: ListTile(
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(5)),
+                  contentPadding: const EdgeInsets.only(left: 20, right: 20),
+                  tileColor: Colors.grey[850],
+                  textColor: Colors.white,
+                  title: const Text('IMG0000012345'),
+                  subtitle: const Text('th;asdjfl sdaflkjsdf sd f'),
+                ),
               ),
             ],
           ),
@@ -111,21 +124,23 @@ class SearchBar extends StatelessWidget {
   Widget build(BuildContext context) {
     return TextField(
       onTap: () {},
+      style: const TextStyle(fontSize: 14),
       decoration: InputDecoration(
+        isDense: true,
+        contentPadding: const EdgeInsets.all(0),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(4),
           borderSide: const BorderSide(
-            width: 0,
-            style: BorderStyle.none,
+            width: 2,
+            style: BorderStyle.solid,
           ),
         ),
-        contentPadding: const EdgeInsets.all(16),
         fillColor: Colors.grey[200],
         filled: true,
         hintText: 'search',
         prefixIcon: const Icon(
           Icons.search,
-          size: 24,
+          size: 14,
           color: Colors.black,
         ),
       ),
