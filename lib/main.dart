@@ -12,9 +12,12 @@ class FastIMApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
+      // hide the debug banner on top right
       debugShowCheckedModeBanner: false,
       title: 'FastIM',
+
       theme: ThemeData(
+          fontFamily: 'segoeui',
           appBarTheme: const AppBarTheme(
             backgroundColor: Colors.green,
             foregroundColor: Colors.white,
