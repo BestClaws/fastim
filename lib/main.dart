@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:fluent_ui/fluent_ui.dart';
 
 void main() {
   // runs the fastim application.
@@ -11,23 +11,34 @@ class FastIMApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      // hide the debug banner on top right
-      debugShowCheckedModeBanner: false,
-      title: 'FastIM',
-
-      theme: ThemeData(
-          fontFamily: 'segoeui',
-          appBarTheme: AppBarTheme(
-            backgroundColor: Colors.grey[800],
-            foregroundColor: Colors.white,
+    return FluentApp(
+        themeMode: ThemeMode.dark,
+        darkTheme: ThemeData(
+          accentColor: Colors.green,
+          brightness: Brightness.dark,
+        ),
+        // hide the debug banner on top right
+        debugShowCheckedModeBanner: false,
+        title: 'FastIM',
+        home: NavigationView(
+          appBar: const NavigationAppBar(
+            title: Text('Incidents Overview'),
           ),
-          floatingActionButtonTheme: const FloatingActionButtonThemeData(
-            backgroundColor: Colors.green,
-          )),
-
-      home: const MyHomePage(title: 'Incidents - Overview'),
-    );
+          pane: NavigationPane(
+            selected: 0,
+            onChanged: (i) {},
+            displayMode: PaneDisplayMode.compact,
+            items: [
+              PaneItem(
+                  icon: const Icon(FluentIcons.issue_tracking),
+                  title: const Text('Incidents'),
+                  infoBadge: const InfoBadge(source: Text('8')),
+                  body: MyHomePage(
+                    title: 'abc',
+                  )),
+            ],
+          ),
+        ));
   }
 }
 
@@ -41,138 +52,87 @@ class MyHomePage extends StatefulWidget {
 }
 
 class _MyHomePageState extends State<MyHomePage> {
-  void _incrementCounter() {
-    setState(() {});
-  }
-
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.grey[900],
-      appBar: AppBar(
-        toolbarHeight: 36,
-        title: Text(widget.title, style: const TextStyle(fontSize: 14)),
-      ),
-      body: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-        // for search bar and buttons
-        Padding(
-          padding: const EdgeInsets.all(0),
-          child: Container(
-            color: Colors.grey[850],
-            padding: const EdgeInsets.only(top: 15, bottom: 10),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                const SizedBox(width: 500, child: SearchBar()),
-                Padding(
-                  padding: const EdgeInsets.only(left: 10),
-                  child: ElevatedButton(
-                    style: ButtonStyle(
-                        backgroundColor:
-                            MaterialStateProperty.all(Colors.green),
-                        visualDensity: VisualDensity.comfortable,
-                        padding: MaterialStateProperty.all(
-                            const EdgeInsets.all(12))),
-                    child: const Text(
-                      'search',
-                      style: TextStyle(fontSize: 16),
-                    ),
-                    onPressed: () {},
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-        // for results list view
+    return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+      // for search bar and buttons
 
-        Expanded(
-          child: ListView(
-            padding:
-                const EdgeInsets.only(left: 50, right: 50, top: 20, bottom: 20),
-            children: [
-              Padding(
-                padding: const EdgeInsets.only(bottom: 10),
-                child: ExpansionTile(
-                  title: const Text('my problem',
-                      style: TextStyle(color: Colors.white)),
-                  subtitle: Text('ABC000001234',
-                      style: TextStyle(color: Colors.grey[500], fontSize: 12)),
+      Card(
+        // padding: const EdgeInsets.only(top: 20, bottom: 30),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const SizedBox(width: 500, child: SearchBar()),
+            Padding(
+              padding: const EdgeInsets.only(left: 10),
+              child: FilledButton(
+                child: const Text(
+                  'search',
+                  style: TextStyle(fontSize: 16),
+                ),
+                onPressed: () {},
+              ),
+            ),
+          ],
+        ),
+      ),
+
+      // for results list view
+
+      Expanded(
+        child: ListView(
+          padding:
+              const EdgeInsets.only(left: 50, right: 50, top: 20, bottom: 20),
+          children: [
+            Padding(
+              padding: const EdgeInsets.only(bottom: 10),
+              child: Expander(
+                  header: const Text(
+                    'my problem',
+                  ),
+                  // subtitle: Text('ABC000001234'),
                   // controlAffinity: ListTileControlAffinity.leading,
-                  trailing: ElevatedButton(
+                  trailing: FilledButton(
                     child: Text('open'),
                     onPressed: () {},
                   ),
-                  backgroundColor: Colors.grey[850],
-                  collapsedBackgroundColor: Colors.grey[850],
-                  textColor: Colors.white,
-
-                  children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                      children: [
-                        SizedBox(
-                          width: 100,
-                          child: TextField(
-                            style: const TextStyle(color: Colors.white),
-                            decoration: InputDecoration(
-                              isDense: true,
-                              contentPadding: const EdgeInsets.all(8),
-                              border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(5),
-                                borderSide: const BorderSide(
-                                  width: 0,
-                                  style: BorderStyle.none,
-                                ),
-                              ),
-                              fillColor: Colors.grey[800],
-                              filled: true,
-                              hintText: 'sr no',
+                  content: Column(
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                        children: [
+                          SizedBox(
+                            width: 100,
+                            child: TextBox(
+                              placeholder: 'SR No.',
+                              placeholderStyle:
+                                  TextStyle(color: Colors.grey[120]),
                             ),
                           ),
-                        ),
-                        DropdownButton(
-                            icon: Padding(
+                          ComboBox<String>(
+                              icon: Padding(
                                 //Icon at tail, arrow bottom is default icon
                                 padding: EdgeInsets.only(left: 15),
-                                child: Icon(Icons.arrow_drop_down_circle)),
-                            itemHeight: kMinInteractiveDimension,
-                            style: TextStyle(
-                              //te
-                              color: Colors.white, //Font color
-                            ),
-                            dropdownColor:
-                                Colors.grey[800], //dropdown background color
-                            underline: Container(), //remove underline
-                            // isExpanded: true, //make true to make width 100%
-                            isDense: true,
-                            items: [
-                              DropdownMenuItem(child: Text('WIP/Target')),
-                            ],
-                            onChanged: (obj) {})
-                      ],
-                    ),
-                    Column(
-                      children: [
-                        ListTile(
-                          title: Text('abc'),
-                        )
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
+                                child: Icon(
+                                  FluentIcons.down,
+                                ),
+                              ),
+                              items: [
+                                ComboBoxItem(
+                                    value: 'WIP/Target',
+                                    child: Text('WIP/Target')),
+                              ],
+                              value: 'WIP/Target',
+                              onChanged: (obj) {})
+                        ],
+                      ),
+                    ],
+                  )),
+            ),
+          ],
         ),
-      ]),
-
-      floatingActionButton: FloatingActionButton(
-        onPressed: _incrementCounter,
-        tooltip: 'Increment',
-        child: const Icon(Icons.add),
-      ), // This trailing comma makes auto-formatting nicer for build methods.
-    );
+      ),
+    ]);
   }
 }
 
@@ -181,24 +141,11 @@ class SearchBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return TextField(
+    return TextBox(
+      placeholder: 'search ticket or description',
+      placeholderStyle: TextStyle(color: Colors.grey[120]),
       onTap: () {},
       style: const TextStyle(fontSize: 14),
-      decoration: InputDecoration(
-        isDense: true,
-        contentPadding: const EdgeInsets.all(0),
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(4),
-        ),
-        fillColor: Colors.grey[200],
-        filled: true,
-        hintText: 'search',
-        prefixIcon: const Icon(
-          Icons.search,
-          size: 14,
-          color: Colors.black,
-        ),
-      ),
     );
   }
 }
