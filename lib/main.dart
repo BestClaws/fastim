@@ -93,14 +93,73 @@ class _MyHomePageState extends State<MyHomePage> {
             children: [
               Padding(
                 padding: const EdgeInsets.only(bottom: 10),
-                child: ListTile(
-                  shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(5)),
-                  contentPadding: const EdgeInsets.only(left: 20, right: 20),
-                  tileColor: Colors.grey[850],
+                child: ExpansionTile(
+                  title: const Text('my problem',
+                      style: TextStyle(color: Colors.white)),
+                  subtitle: Text('ABC000001234',
+                      style: TextStyle(color: Colors.grey[500], fontSize: 12)),
+                  // controlAffinity: ListTileControlAffinity.leading,
+                  trailing: ElevatedButton(
+                    child: Text('open'),
+                    onPressed: () {},
+                  ),
+                  backgroundColor: Colors.grey[850],
+                  collapsedBackgroundColor: Colors.grey[850],
                   textColor: Colors.white,
-                  title: const Text('IMG0000012345'),
-                  subtitle: const Text('th;asdjfl sdaflkjsdf sd f'),
+
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                      children: [
+                        SizedBox(
+                          width: 100,
+                          child: TextField(
+                            style: const TextStyle(color: Colors.white),
+                            decoration: InputDecoration(
+                              isDense: true,
+                              contentPadding: const EdgeInsets.all(8),
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(5),
+                                borderSide: const BorderSide(
+                                  width: 0,
+                                  style: BorderStyle.none,
+                                ),
+                              ),
+                              fillColor: Colors.grey[800],
+                              filled: true,
+                              hintText: 'sr no',
+                            ),
+                          ),
+                        ),
+                        DropdownButton(
+                            icon: Padding(
+                                //Icon at tail, arrow bottom is default icon
+                                padding: EdgeInsets.only(left: 15),
+                                child: Icon(Icons.arrow_drop_down_circle)),
+                            itemHeight: kMinInteractiveDimension,
+                            style: TextStyle(
+                              //te
+                              color: Colors.white, //Font color
+                            ),
+                            dropdownColor:
+                                Colors.grey[800], //dropdown background color
+                            underline: Container(), //remove underline
+                            // isExpanded: true, //make true to make width 100%
+                            isDense: true,
+                            items: [
+                              DropdownMenuItem(child: Text('WIP/Target')),
+                            ],
+                            onChanged: (obj) {})
+                      ],
+                    ),
+                    Column(
+                      children: [
+                        ListTile(
+                          title: Text('abc'),
+                        )
+                      ],
+                    ),
+                  ],
                 ),
               ),
             ],
@@ -130,10 +189,6 @@ class SearchBar extends StatelessWidget {
         contentPadding: const EdgeInsets.all(0),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(4),
-          borderSide: const BorderSide(
-            width: 2,
-            style: BorderStyle.solid,
-          ),
         ),
         fillColor: Colors.grey[200],
         filled: true,
