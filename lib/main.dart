@@ -82,34 +82,34 @@ class _MyHomePageState extends State<MyHomePage> {
       Expanded(
         child: ListView(
           padding:
-              const EdgeInsets.only(left: 50, right: 50, top: 20, bottom: 20),
+              const EdgeInsets.only(left: 100, right: 100, top: 20, bottom: 20),
           children: [
-            Padding(
-              padding: const EdgeInsets.only(bottom: 10),
-              child: Expander(
-                  header: const Text(
-                    'my problem',
-                  ),
-                  // subtitle: Text('ABC000001234'),
-                  // controlAffinity: ListTileControlAffinity.leading,
-                  trailing: FilledButton(
-                    child: Text('open'),
-                    onPressed: () {},
-                  ),
-                  content: Column(
-                    children: [
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                        children: [
-                          SizedBox(
-                            width: 100,
-                            child: TextBox(
-                              placeholder: 'SR No.',
-                              placeholderStyle:
-                                  TextStyle(color: Colors.grey[120]),
-                            ),
+            Expander(
+                header: const Text(
+                  'my problem',
+                ),
+                // subtitle: Text('ABC000001234'),
+                // controlAffinity: ListTileControlAffinity.leading,
+                trailing: FilledButton(
+                  child: const Text('open'),
+                  onPressed: () {},
+                ),
+                content: Column(
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.start,
+                      children: [
+                        SizedBox(
+                          width: 100,
+                          child: TextBox(
+                            placeholder: 'SR No.',
+                            placeholderStyle:
+                                TextStyle(color: Colors.grey[120]),
                           ),
-                          ComboBox<String>(
+                        ),
+                        Padding(
+                          padding: const EdgeInsets.only(left: 8),
+                          child: ComboBox<String>(
                               icon: Padding(
                                 //Icon at tail, arrow bottom is default icon
                                 padding: EdgeInsets.only(left: 15),
@@ -123,12 +123,44 @@ class _MyHomePageState extends State<MyHomePage> {
                                     child: Text('WIP/Target')),
                               ],
                               value: 'WIP/Target',
-                              onChanged: (obj) {})
-                        ],
-                      ),
-                    ],
-                  )),
-            ),
+                              onChanged: (obj) {}),
+                        )
+                      ],
+                    ),
+                    Padding(
+                        padding: const EdgeInsets.only(top: 10, bottom: 10),
+                        child: TextBox()),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Padding(
+                              padding: EdgeInsets.only(right: 10),
+                              child: Icon(
+                                FluentIcons.circle_ring,
+                                size: 8,
+                              ),
+                            ),
+                            Text('tried to book'),
+                          ],
+                        ),
+                        Row(
+                          children: [
+                            Padding(
+                              padding: EdgeInsets.only(right: 10),
+                              child: Icon(
+                                FluentIcons.circle_ring,
+                                size: 8,
+                              ),
+                            ),
+                            Text('tried to book'),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ],
+                )),
           ],
         ),
       ),
