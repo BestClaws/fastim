@@ -102,6 +102,11 @@ class _MyHomePageState extends State<MyHomePage> {
                         SizedBox(
                           width: 100,
                           child: TextBox(
+                            foregroundDecoration: const BoxDecoration(
+                              border: Border(
+                                bottom: BorderSide.none,
+                              ),
+                            ),
                             placeholder: 'SR No.',
                             placeholderStyle:
                                 TextStyle(color: Colors.grey[120]),
@@ -129,7 +134,13 @@ class _MyHomePageState extends State<MyHomePage> {
                     ),
                     Padding(
                         padding: const EdgeInsets.only(top: 10, bottom: 10),
-                        child: TextBox()),
+                        child: TextBox(
+                          foregroundDecoration: BoxDecoration(
+                            border: Border(
+                              bottom: BorderSide.none,
+                            ),
+                          ),
+                        )),
                     Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
