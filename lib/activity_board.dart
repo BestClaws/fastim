@@ -1,3 +1,4 @@
+import 'package:fastim/incidents_manager.dart';
 import 'package:fluent_ui/fluent_ui.dart';
 import 'package:provider/provider.dart';
 
@@ -11,9 +12,6 @@ class ActivityBoard extends StatefulWidget {
 }
 
 class _ActivityBoardState extends State<ActivityBoard> {
-  // stores the list of activities done on the ticket.
-  List<String> activityList = [];
-
   final _controller = TextEditingController();
 
   @override
@@ -23,11 +21,15 @@ class _ActivityBoardState extends State<ActivityBoard> {
       Padding(
           padding: const EdgeInsets.only(top: 10, bottom: 10),
           child: TextBox(
+            placeholder: "any progress to record?",
+            placeholderStyle: TextStyle(color: Colors.grey[120]),
             controller: _controller,
-            onSubmitted: (str) {
-              _controller.clear;
+            onSubmitted: (newActivity) {
+              _controller.clear();
               setState(() {
-                activityList.add(str);
+                Provider.of<IncidentModel>(context, listen: false)
+                    .activityList
+                    .add(newActivity);
               });
             },
             foregroundDecoration: const BoxDecoration(
@@ -37,22 +39,26 @@ class _ActivityBoardState extends State<ActivityBoard> {
             ),
           )),
       // the list of activities.
-      Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: activityList
-            .map((activity) => Row(
-                  children: [
-                    const Padding(
-                      padding: EdgeInsets.only(right: 10),
-                      child: Icon(
-                        FluentIcons.circle_ring,
-                        size: 8,
-                      ),
-                    ),
-                    Text(activity),
-                  ],
-                ))
-            .toList(),
+      Consumer<IncidentModel>(
+        builder: (context, incidentModel, child) {
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: incidentModel.activityList
+                .map((activity) => Row(
+                      children: [
+                        const Padding(
+                          padding: EdgeInsets.only(right: 10),
+                          child: Icon(
+                            FluentIcons.circle_ring,
+                            size: 8,
+                          ),
+                        ),
+                        Text(activity),
+                      ],
+                    ))
+                .toList(),
+          );
+        },
       )
     ]);
   }
