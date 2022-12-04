@@ -118,10 +118,11 @@ class IncidentTile extends StatelessWidget {
             var data = await _fetchDetails();
             incidentModel.srNo = data['srNo'];
             incidentModel.ticketStatus = data["ticketStatus"];
-            incidentModel.activityList = data["activityList"].cast<String>();
+            incidentModel._activityList = data["activityList"].cast<String>();
             incidentModel.ready = true;
           } else {
             // persist state to the disk.
+            incidentModel.ready = false;
           }
         },
         // title and description of incident.
@@ -205,28 +206,36 @@ class PersistantFields extends StatelessWidget {
 }
 
 class IncidentModel extends ChangeNotifier {
-  bool ready = false;
   String _srNo = "--";
   String _ticketStatus = "other";
+  bool _ready = false;
+  List<String> _activityList = [];
+
+  bool get ready => _ready;
+
+  set ready(bool ready) {
+    _ready = ready;
+    notifyListeners();
+  }
+
+  String get srNo => _srNo;
 
   set srNo(String srNo) {
     _srNo = srNo;
     notifyListeners();
   }
 
-  String get srNo => _srNo;
+  String get ticketStatus => _ticketStatus;
 
   set ticketStatus(String ticketStatus) {
     _ticketStatus = ticketStatus;
     notifyListeners();
   }
 
-  String get ticketStatus => _ticketStatus;
-
-  List<String> activityList = [];
+  List<String> get activityList => _activityList;
 
   void addActivity(String activity) {
-    activityList.add(activity);
+    _activityList.add(activity);
     notifyListeners();
   }
 }
