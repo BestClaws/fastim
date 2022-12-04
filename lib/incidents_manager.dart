@@ -1,5 +1,10 @@
+import 'dart:convert';
+import 'dart:io';
+
 import 'package:fluent_ui/fluent_ui.dart';
 import 'package:provider/provider.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:path/path.dart' as p;
 
 import 'activity_board.dart';
 
@@ -63,52 +68,75 @@ class _IncidentsManagerState extends State<IncidentsManager> {
 
   /// Displays the list of results that match the search term in search bar
   _buildResultsList() {
+    // fetch incidents (no and title)
+
     return Expanded(
       child: ListView(
         padding:
             const EdgeInsets.only(left: 100, right: 100, top: 20, bottom: 20),
         children: const [
-          IncidentTile(),
+          IncidentTile(ticketNo: 'a1', shortDescription: 'hello1'),
+          IncidentTile(ticketNo: 'a2', shortDescription: 'hello2'),
         ],
       ),
     );
   }
 }
 
-class IncidentTile extends StatefulWidget {
-  const IncidentTile({
-    Key? key,
-  }) : super(key: key);
+class IncidentTile extends StatelessWidget {
+  final String ticketNo;
+  final String shortDescription;
 
-  @override
-  State<IncidentTile> createState() => _IncidentTileState();
-}
+  const IncidentTile(
+      {Key? key, required this.ticketNo, this.shortDescription = ""})
+      : super(key: key);
 
-class _IncidentTileState extends State<IncidentTile> {
+  _fetchDetails() async {
+    var documentsDirectory = await getApplicationDocumentsDirectory();
+    var path = documentsDirectory.path;
+    String img1 = p.join(path, 'IMG1', 'details.json');
+    var file = File(img1);
+    var str = await file.readAsString();
+    return json.decode(str);
+  }
+
   @override
   Widget build(BuildContext context) {
-    return Expander(
-        onStateChanged: (value) {
-          print(value);
+    late IncidentModel incidentModel;
+
+    return ChangeNotifierProvider<IncidentModel>(
+      create: (context) {
+        // NOTE: weird way of accessing model in a widget that's above the change notifier's widget tree.
+        // consdier making wrapping the content's column with a new widget. this will also allow to
+        // cleanly add progress bar for everything that's expanded.
+        incidentModel = IncidentModel();
+        return incidentModel;
+      },
+      child: Expander(
+        onStateChanged: (opened) async {
+          if (opened) {
+            var data = await _fetchDetails();
+            incidentModel.srNo = data['srNo'];
+            incidentModel.ticketStatus = data["ticketStatus"];
+            incidentModel.activityList = data["activityList"].cast<String>();
+            incidentModel.ready = true;
+          } else {
+            // persist state to the disk.
+          }
         },
         // title and description of incident.
-        header: const Text(
-          'my problem',
-        ),
+        header: Text("$ticketNo $shortDescription"),
         // button to open the incident in full page for working.
         trailing: FilledButton(
           child: const Text('open'),
           onPressed: () {},
         ),
         // persistant fields and activity board.
-        content: ChangeNotifierProvider<IncidentModel>(
-          create: (context) {
-            return IncidentModel();
-          },
-          child: Column(
-            children: const [PersistantFields(), ActivityBoard()],
-          ),
-        ));
+        content: Column(
+          children: const [PersistantFields(), ActivityBoard()],
+        ),
+      ),
+    );
   }
 }
 
@@ -119,7 +147,11 @@ class PersistantFields extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    var incidentModel = Provider.of<IncidentModel>(context, listen: true);
+    var incidentModel = Provider.of<IncidentModel>(context);
+
+    if (!incidentModel.ready) {
+      return const Center(child: ProgressRing());
+    }
 
     return Row(
       mainAxisAlignment: MainAxisAlignment.start,
@@ -129,7 +161,9 @@ class PersistantFields extends StatelessWidget {
           width: 100,
           child: TextBox(
             initialValue: incidentModel.srNo,
-            onChanged: (value) => incidentModel.srNo = value,
+            onChanged: (value) {
+              incidentModel.srNo = value;
+            },
             foregroundDecoration: const BoxDecoration(
               border: Border(
                 bottom: BorderSide.none,
@@ -171,7 +205,8 @@ class PersistantFields extends StatelessWidget {
 }
 
 class IncidentModel extends ChangeNotifier {
-  String _srNo = "";
+  bool ready = false;
+  String _srNo = "--";
   String _ticketStatus = "other";
 
   set srNo(String srNo) {
