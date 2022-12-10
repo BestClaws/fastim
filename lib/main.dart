@@ -1,7 +1,4 @@
 import 'package:fluent_ui/fluent_ui.dart';
-import 'package:provider/provider.dart';
-import 'package:path_provider/path_provider.dart';
-
 import 'incidents_manager.dart';
 import 'theme_config.dart';
 
@@ -11,8 +8,8 @@ void main() {
 }
 
 /// root widget that hosts the entire fastim application.
-/// TODO: right now I want a sequence diagram viewer and incident management
 /// in the same app or ticket history viewer as standalone
+// TODO: right now I want a sequence diagram viewer and incident management
 class FastIMApp extends StatelessWidget {
   const FastIMApp({super.key});
 
