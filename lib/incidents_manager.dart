@@ -95,16 +95,23 @@ class IncidentSearchResults extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    var children = incidents.map((incidentOverview) {
+      return IncidentTile(
+        ticketNo: incidentOverview.no,
+        shortDescription: incidentOverview.shortDescription,
+      );
+    }).toList();
+
+    children.add(const IncidentTile(
+      ticketNo: 'img1',
+      shortDescription: 'hi',
+    ));
+
     return Expanded(
       child: ListView(
         padding:
             const EdgeInsets.only(left: 100, right: 100, top: 20, bottom: 20),
-        children: incidents.map((incidentOverview) {
-          return IncidentTile(
-            ticketNo: incidentOverview.no,
-            shortDescription: incidentOverview.shortDescription,
-          );
-        }).toList(),
+        children: children,
       ),
     );
   }
@@ -130,45 +137,43 @@ class IncidentTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    late IncidentModel incident;
-
     return ChangeNotifierProvider<IncidentModel>(
-      create: (context) {
-        // NOTE-cosmic: weird way of accessing model from a widget that's above the change notifier's widget tree.
-        // consdier making wrapping the content's column with a new widget. this will also allow to
-        // cleanly add progress bar for everything that's expanded.
-        incident = IncidentModel();
-        return incident;
+      create: (context) => IncidentModel(),
+      builder: (context, child) {
+        var incident = Provider.of<IncidentModel>(context, listen: false);
+        return Expander(
+          onStateChanged: (opened) async {
+            if (opened) {
+              // load incident tile data from disk.
+              var data = await _fetchIncidentFromDisk(ticketNo);
+              incident.srNo = data['srNo'];
+              incident.ticketStatus = data["ticketStatus"];
+              incident._activityList = data["activityList"].cast<String>();
+              incident.ready = true;
+            } else {
+              // persist state to the disk.
+              incident.ready = false;
+              _saveIncidentToDisk(incident);
+            }
+          },
+          // title and description of incident.
+          header: Text("$ticketNo $shortDescription"),
+          // button to open the incident in full page for working.
+          trailing: FilledButton(
+            child: const Text('open'),
+            onPressed: () {},
+          ),
+          // persistant fields and activity board.
+          content: Consumer<IncidentModel>(
+            builder: (context, inci, child) {
+              if (!inci.ready) return const Center(child: ProgressRing());
+              return Column(
+                children: const [IncidentTileFields(), ActivityBoard()],
+              );
+            },
+          ),
+        );
       },
-      child: Expander(
-        onStateChanged: (opened) async {
-          if (opened) {
-            // load incident tile data from disk.
-            var data = await _fetchIncidentFromDisk(ticketNo);
-            incident.srNo = data['srNo'];
-            incident.ticketStatus = data["ticketStatus"];
-            incident._activityList = data["activityList"].cast<String>();
-            incident.ready = true;
-          } else {
-            // persist state to the disk.
-            incident.ready = false;
-            _saveIncidentToDisk(incident);
-          }
-        },
-        // title and description of incident.
-        header: Text("$ticketNo $shortDescription"),
-        // button to open the incident in full page for working.
-        trailing: FilledButton(
-          child: const Text('open'),
-          onPressed: () {},
-        ),
-        // persistant fields and activity board.
-        content: Column(
-          // NOTE-cosmic: I can't add a progress bar here and switch it to content when loaded
-          // as this is a stateless widget and build() only runs once.
-          children: const [IncidentTileFields(), ActivityBoard()],
-        ),
-      ),
     );
   }
 
@@ -205,11 +210,7 @@ class IncidentTileFields extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    var incident = Provider.of<IncidentModel>(context);
-
-    if (!incident.ready) {
-      return const Center(child: ProgressRing());
-    }
+    var incident = Provider.of<IncidentModel>(context, listen: false);
 
     return Row(
       mainAxisAlignment: MainAxisAlignment.start,
