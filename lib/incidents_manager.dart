@@ -75,8 +75,10 @@ class _IncidentsManagerState extends State<IncidentsManager> {
         padding:
             const EdgeInsets.only(left: 100, right: 100, top: 20, bottom: 20),
         children: const [
-          IncidentTile(ticketNo: 'a1', shortDescription: 'hello1'),
-          IncidentTile(ticketNo: 'a2', shortDescription: 'hello2'),
+          IncidentTile(
+              ticketNo: 'img1', shortDescription: 'img1 short description.'),
+          IncidentTile(
+              ticketNo: 'img2', shortDescription: 'img2 short description'),
         ],
       ),
     );
@@ -90,15 +92,6 @@ class IncidentTile extends StatelessWidget {
   const IncidentTile(
       {Key? key, required this.ticketNo, this.shortDescription = ""})
       : super(key: key);
-
-  _fetchDetails() async {
-    var documentsDirectory = await getApplicationDocumentsDirectory();
-    var path = documentsDirectory.path;
-    String img1 = p.join(path, 'IMG1', 'details.json');
-    var file = File(img1);
-    var str = await file.readAsString();
-    return json.decode(str);
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -115,7 +108,8 @@ class IncidentTile extends StatelessWidget {
       child: Expander(
         onStateChanged: (opened) async {
           if (opened) {
-            var data = await _fetchDetails();
+            // load incident tile data from disk.
+            var data = await _fetchDetailsFromDisk(ticketNo);
             incidentModel.srNo = data['srNo'];
             incidentModel.ticketStatus = data["ticketStatus"];
             incidentModel._activityList = data["activityList"].cast<String>();
@@ -123,6 +117,7 @@ class IncidentTile extends StatelessWidget {
           } else {
             // persist state to the disk.
             incidentModel.ready = false;
+            _saveDetailsToDisk(incidentModel);
           }
         },
         // title and description of incident.
@@ -138,6 +133,29 @@ class IncidentTile extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  _fetchDetailsFromDisk(String ticketNo) async {
+    var documentsDirectory = await getApplicationDocumentsDirectory();
+    var path = documentsDirectory.path;
+    String img1 = p.join(path, ticketNo, 'details.json');
+    var file = File(img1);
+    // TODO: fails if file not found, need to handle this.
+    var str = await file.readAsString();
+    return json.decode(str);
+  }
+
+  _saveDetailsToDisk(IncidentModel incidentModel) async {
+    var documentDirectory = await getApplicationDocumentsDirectory();
+    var detailsJsonPath = documentDirectory.path;
+    detailsJsonPath = p.join(detailsJsonPath, ticketNo, 'details.json');
+    var file = File(detailsJsonPath);
+    dynamic data = {};
+    data['srNo'] = incidentModel.srNo;
+    data["ticketStatus"] = incidentModel.ticketStatus;
+    data["activityList"] = incidentModel._activityList;
+    var encodedData = jsonEncode(data);
+    await file.writeAsString(encodedData);
   }
 }
 

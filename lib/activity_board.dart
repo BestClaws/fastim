@@ -1,3 +1,6 @@
+/// the activity board records the activities done on ticket
+/// trhough out its history.
+
 import 'package:fastim/incidents_manager.dart';
 import 'package:fluent_ui/fluent_ui.dart';
 import 'package:provider/provider.dart';
