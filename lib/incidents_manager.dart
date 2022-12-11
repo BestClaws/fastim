@@ -8,41 +8,31 @@ import 'package:path/path.dart' as p;
 
 import 'activity_board.dart';
 
-class SearchBar extends StatelessWidget {
-  const SearchBar({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return TextBox(
-      placeholder: 'search ticket or description',
-      placeholderStyle: TextStyle(color: Colors.grey[120]),
-      onTap: () {},
-      style: const TextStyle(fontSize: 14),
-    );
-  }
-}
-
 /// Main overview page of the incident manager
-class IncidentsManager extends StatefulWidget {
+class IncidentsManager extends StatelessWidget {
   const IncidentsManager({super.key});
 
   @override
-  State<IncidentsManager> createState() => _IncidentsManagerState();
+  Widget build(BuildContext context) {
+    return Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: const [
+          // for search bar and buttons
+          IncidentSearchBar(),
+          // for results list view
+          IncidentSearchResults()
+        ]);
+  }
 }
 
-class _IncidentsManagerState extends State<IncidentsManager> {
+/// Top Search bar with search field and a  button
+class IncidentSearchBar extends StatelessWidget {
+  const IncidentSearchBar({
+    Key? key,
+  }) : super(key: key);
+
   @override
   Widget build(BuildContext context) {
-    return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-      // for search bar and buttons
-      _buildSearchBar(),
-      // for results list view
-      _buildResultsList()
-    ]);
-  }
-
-  /// Top Search bar with search field and a  button
-  _buildSearchBar() {
     return Container(
       color: Colors.grey[190],
       padding: const EdgeInsets.all(15),
@@ -50,7 +40,13 @@ class _IncidentsManagerState extends State<IncidentsManager> {
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           // TODO: prefer to make this flexible
-          const Expanded(child: SearchBar()),
+          Expanded(
+              child: TextBox(
+            placeholder: 'search ticket or description',
+            placeholderStyle: TextStyle(color: Colors.grey[120]),
+            onTap: () {},
+            style: const TextStyle(fontSize: 14),
+          )),
           Padding(
             padding: const EdgeInsets.only(left: 10),
             child: FilledButton(
@@ -65,11 +61,16 @@ class _IncidentsManagerState extends State<IncidentsManager> {
       ),
     );
   }
+}
 
-  /// Displays the list of results that match the search term in search bar
-  _buildResultsList() {
-    // fetch incidents (no and title)
+/// Displays the list of results that match the search term in search bar
+class IncidentSearchResults extends StatelessWidget {
+  const IncidentSearchResults({
+    Key? key,
+  }) : super(key: key);
 
+  @override
+  Widget build(BuildContext context) {
     return Expanded(
       child: ListView(
         padding:
@@ -99,7 +100,7 @@ class IncidentTile extends StatelessWidget {
 
     return ChangeNotifierProvider<IncidentModel>(
       create: (context) {
-        // NOTE: weird way of accessing model in a widget that's above the change notifier's widget tree.
+        // NOTE-cosmic: weird way of accessing model from a widget that's above the change notifier's widget tree.
         // consdier making wrapping the content's column with a new widget. this will also allow to
         // cleanly add progress bar for everything that's expanded.
         incidentModel = IncidentModel();
@@ -129,7 +130,9 @@ class IncidentTile extends StatelessWidget {
         ),
         // persistant fields and activity board.
         content: Column(
-          children: const [PersistantFields(), ActivityBoard()],
+          // NOTE-cosmic: I can't add a progress bar here and switch it to content when loaded
+          // as this is a stateless widget and build() only runs once.
+          children: const [IncidentTileFields(), ActivityBoard()],
         ),
       ),
     );
@@ -137,9 +140,10 @@ class IncidentTile extends StatelessWidget {
 
   _fetchDetailsFromDisk(String ticketNo) async {
     var documentsDirectory = await getApplicationDocumentsDirectory();
-    var path = documentsDirectory.path;
-    String img1 = p.join(path, ticketNo, 'details.json');
-    var file = File(img1);
+    var documentsDirectoryPath = documentsDirectory.path;
+    String detailsJsonpath = p.join(documentsDirectoryPath, 'fastim',
+        'incidents', ticketNo, 'details.json');
+    var file = File(detailsJsonpath);
     // TODO: fails if file not found, need to handle this.
     var str = await file.readAsString();
     return json.decode(str);
@@ -147,8 +151,9 @@ class IncidentTile extends StatelessWidget {
 
   _saveDetailsToDisk(IncidentModel incidentModel) async {
     var documentDirectory = await getApplicationDocumentsDirectory();
-    var detailsJsonPath = documentDirectory.path;
-    detailsJsonPath = p.join(detailsJsonPath, ticketNo, 'details.json');
+    var documentsDirectoryPath = documentDirectory.path;
+    var detailsJsonPath = p.join(documentsDirectoryPath, 'fastim', 'incidents',
+        ticketNo, 'details.json');
     var file = File(detailsJsonPath);
     dynamic data = {};
     data['srNo'] = incidentModel.srNo;
@@ -159,8 +164,8 @@ class IncidentTile extends StatelessWidget {
   }
 }
 
-class PersistantFields extends StatelessWidget {
-  const PersistantFields({
+class IncidentTileFields extends StatelessWidget {
+  const IncidentTileFields({
     Key? key,
   }) : super(key: key);
 
@@ -223,6 +228,7 @@ class PersistantFields extends StatelessWidget {
   }
 }
 
+// represents the entire state of an incident tile.
 class IncidentModel extends ChangeNotifier {
   String _srNo = "--";
   String _ticketStatus = "other";
