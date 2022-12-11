@@ -65,7 +65,31 @@ class IncidentSearchBar extends StatelessWidget {
               child: TextBox(
             placeholder: 'search ticket or description',
             placeholderStyle: TextStyle(color: Colors.grey[120]),
-            onTap: () {},
+            onSubmitted: (x) async {
+              // process search query.
+              // currently only supports searching incidents.
+
+              List<IncidentOverviewModel> results = [];
+
+              var searchControllerModel =
+                  Provider.of<SearchControllerModel>(context, listen: false);
+
+              List<dynamic> incidentOverviews =
+                  await _fetchAllIncidentsOverview();
+
+              for (var incidentOverview in incidentOverviews) {
+                if (incidentOverview["ticketNo"].contains(x) ||
+                    incidentOverview["shortDescription"].contains(x)) {
+                  var incidentOverviewModel = IncidentOverviewModel(
+                      no: incidentOverview["ticketNo"],
+                      shortDescription: incidentOverview["shortDescription"],
+                      archived: incidentOverview["archived"]);
+                  results.add(incidentOverviewModel);
+                }
+              }
+
+              searchControllerModel.searchResults = results;
+            },
             style: const TextStyle(fontSize: 14),
           )),
           Padding(
@@ -81,6 +105,15 @@ class IncidentSearchBar extends StatelessWidget {
         ],
       ),
     );
+  }
+
+  _fetchAllIncidentsOverview() async {
+    var documentsDirectory = await getApplicationDocumentsDirectory();
+    var incidentsIndexPath =
+        p.join(documentsDirectory.path, 'fastim', 'incidents', 'index.json');
+    var file = File(incidentsIndexPath);
+    var str = await file.readAsString();
+    return json.decode(str);
   }
 }
 
@@ -101,11 +134,6 @@ class IncidentSearchResults extends StatelessWidget {
         shortDescription: incidentOverview.shortDescription,
       );
     }).toList();
-
-    children.add(const IncidentTile(
-      ticketNo: 'img1',
-      shortDescription: 'hi',
-    ));
 
     return Expanded(
       child: ListView(
@@ -163,10 +191,11 @@ class IncidentTile extends StatelessWidget {
             child: const Text('open'),
             onPressed: () {},
           ),
-          // persistant fields and activity board.
           content: Consumer<IncidentModel>(
             builder: (context, inci, child) {
+              // until expanded and data loaded.
               if (!inci.ready) return const Center(child: ProgressRing());
+              // persistant fields and activity board.
               return Column(
                 children: const [IncidentTileFields(), ActivityBoard()],
               );
