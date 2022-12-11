@@ -43,10 +43,10 @@ class _ActivityBoardState extends State<ActivityBoard> {
           )),
       // the list of activities.
       Consumer<IncidentModel>(
-        builder: (context, incidentModel, child) {
+        builder: (context, incident, child) {
           return Column(
             crossAxisAlignment: CrossAxisAlignment.start,
-            children: incidentModel.activityList
+            children: incident.activityList
                 .map((activity) => Row(
                       children: [
                         const Padding(

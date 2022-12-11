@@ -14,14 +14,35 @@ class IncidentsManager extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: const [
-          // for search bar and buttons
-          IncidentSearchBar(),
-          // for results list view
-          IncidentSearchResults()
-        ]);
+    return ChangeNotifierProvider<SearchControllerModel>(
+      create: (context) => SearchControllerModel(),
+      builder: (context, child) {
+        return Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              // for search bar and buttons
+              const IncidentSearchBar(),
+              // for results list view
+              Consumer<SearchControllerModel>(
+                builder: (context, searchController, child) {
+                  return IncidentSearchResults(
+                      incidents: searchController.searchResults);
+                },
+              )
+            ]);
+      },
+    );
+  }
+}
+
+class SearchControllerModel extends ChangeNotifier {
+  List<IncidentOverviewModel> _searchResults = const [];
+
+  List<IncidentOverviewModel> get searchResults => _searchResults;
+
+  set searchResults(List<IncidentOverviewModel> searchResults) {
+    _searchResults = searchResults;
+    notifyListeners();
   }
 }
 
@@ -65,7 +86,10 @@ class IncidentSearchBar extends StatelessWidget {
 
 /// Displays the list of results that match the search term in search bar
 class IncidentSearchResults extends StatelessWidget {
+  final List<IncidentOverviewModel> incidents;
+
   const IncidentSearchResults({
+    required this.incidents,
     Key? key,
   }) : super(key: key);
 
@@ -75,50 +99,60 @@ class IncidentSearchResults extends StatelessWidget {
       child: ListView(
         padding:
             const EdgeInsets.only(left: 100, right: 100, top: 20, bottom: 20),
-        children: const [
-          IncidentTile(
-              ticketNo: 'img1', shortDescription: 'img1 short description.'),
-          IncidentTile(
-              ticketNo: 'img2', shortDescription: 'img2 short description'),
-        ],
+        children: incidents.map((incidentOverview) {
+          return IncidentTile(
+            ticketNo: incidentOverview.no,
+            shortDescription: incidentOverview.shortDescription,
+          );
+        }).toList(),
       ),
     );
   }
 }
 
+class IncidentOverviewModel {
+  String no;
+  String shortDescription;
+  bool archived;
+
+  IncidentOverviewModel(
+      {required this.no,
+      required this.shortDescription,
+      required this.archived});
+}
+
 class IncidentTile extends StatelessWidget {
   final String ticketNo;
   final String shortDescription;
-
   const IncidentTile(
       {Key? key, required this.ticketNo, this.shortDescription = ""})
       : super(key: key);
 
   @override
   Widget build(BuildContext context) {
-    late IncidentModel incidentModel;
+    late IncidentModel incident;
 
     return ChangeNotifierProvider<IncidentModel>(
       create: (context) {
         // NOTE-cosmic: weird way of accessing model from a widget that's above the change notifier's widget tree.
         // consdier making wrapping the content's column with a new widget. this will also allow to
         // cleanly add progress bar for everything that's expanded.
-        incidentModel = IncidentModel();
-        return incidentModel;
+        incident = IncidentModel();
+        return incident;
       },
       child: Expander(
         onStateChanged: (opened) async {
           if (opened) {
             // load incident tile data from disk.
-            var data = await _fetchDetailsFromDisk(ticketNo);
-            incidentModel.srNo = data['srNo'];
-            incidentModel.ticketStatus = data["ticketStatus"];
-            incidentModel._activityList = data["activityList"].cast<String>();
-            incidentModel.ready = true;
+            var data = await _fetchIncidentFromDisk(ticketNo);
+            incident.srNo = data['srNo'];
+            incident.ticketStatus = data["ticketStatus"];
+            incident._activityList = data["activityList"].cast<String>();
+            incident.ready = true;
           } else {
             // persist state to the disk.
-            incidentModel.ready = false;
-            _saveDetailsToDisk(incidentModel);
+            incident.ready = false;
+            _saveIncidentToDisk(incident);
           }
         },
         // title and description of incident.
@@ -138,7 +172,7 @@ class IncidentTile extends StatelessWidget {
     );
   }
 
-  _fetchDetailsFromDisk(String ticketNo) async {
+  _fetchIncidentFromDisk(String ticketNo) async {
     var documentsDirectory = await getApplicationDocumentsDirectory();
     var documentsDirectoryPath = documentsDirectory.path;
     String detailsJsonpath = p.join(documentsDirectoryPath, 'fastim',
@@ -149,16 +183,16 @@ class IncidentTile extends StatelessWidget {
     return json.decode(str);
   }
 
-  _saveDetailsToDisk(IncidentModel incidentModel) async {
+  _saveIncidentToDisk(IncidentModel incident) async {
     var documentDirectory = await getApplicationDocumentsDirectory();
     var documentsDirectoryPath = documentDirectory.path;
     var detailsJsonPath = p.join(documentsDirectoryPath, 'fastim', 'incidents',
         ticketNo, 'details.json');
     var file = File(detailsJsonPath);
     dynamic data = {};
-    data['srNo'] = incidentModel.srNo;
-    data["ticketStatus"] = incidentModel.ticketStatus;
-    data["activityList"] = incidentModel._activityList;
+    data['srNo'] = incident.srNo;
+    data["ticketStatus"] = incident.ticketStatus;
+    data["activityList"] = incident._activityList;
     var encodedData = jsonEncode(data);
     await file.writeAsString(encodedData);
   }
@@ -171,9 +205,9 @@ class IncidentTileFields extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    var incidentModel = Provider.of<IncidentModel>(context);
+    var incident = Provider.of<IncidentModel>(context);
 
-    if (!incidentModel.ready) {
+    if (!incident.ready) {
       return const Center(child: ProgressRing());
     }
 
@@ -184,9 +218,9 @@ class IncidentTileFields extends StatelessWidget {
         SizedBox(
           width: 100,
           child: TextBox(
-            initialValue: incidentModel.srNo,
+            initialValue: incident.srNo,
             onChanged: (value) {
-              incidentModel.srNo = value;
+              incident.srNo = value;
             },
             foregroundDecoration: const BoxDecoration(
               border: Border(
@@ -216,10 +250,10 @@ class IncidentTileFields extends StatelessWidget {
                 ComboBoxItem(value: 'customer', child: Text('WIP/Customer')),
                 ComboBoxItem(value: 'target', child: Text('WIP/Target')),
               ],
-              value: incidentModel.ticketStatus,
+              value: incident.ticketStatus,
               onChanged: (value) {
                 if (value != null) {
-                  incidentModel.ticketStatus = value;
+                  incident.ticketStatus = value;
                 }
               }),
         )
@@ -230,7 +264,7 @@ class IncidentTileFields extends StatelessWidget {
 
 // represents the entire state of an incident tile.
 class IncidentModel extends ChangeNotifier {
-  String _srNo = "--";
+  String _srNo = "";
   String _ticketStatus = "other";
   bool _ready = false;
   List<String> _activityList = [];
