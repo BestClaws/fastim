@@ -1,7 +1,9 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
 import 'package:fluent_ui/fluent_ui.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as p;
@@ -22,15 +24,115 @@ class IncidentsManager extends StatelessWidget {
             children: [
               // for search bar and buttons
               const IncidentSearchBar(),
+              // create new incident.
+
               // for results list view
               Consumer<SearchControllerModel>(
                 builder: (context, searchController, child) {
+                  if (searchController.searchResults.isEmpty) {
+                    return NewIncidentForm('imgtest');
+                  }
                   return IncidentSearchResults(
                       incidents: searchController.searchResults);
                 },
               )
             ]);
       },
+    );
+  }
+}
+
+class NewIncidentForm extends StatefulWidget {
+  final String incidentNo;
+  const NewIncidentForm(this.incidentNo, {super.key});
+
+  @override
+  State<NewIncidentForm> createState() => _NewIncidentFormState();
+}
+
+class _NewIncidentFormState extends State<NewIncidentForm> {
+  String shortDescription = "";
+  String fullDescription = "";
+  String ticketHistory = "";
+
+  // void foosh() async {
+  //   print((await Clipboard.getData("text/plain"))!.text!);
+  // }
+
+  @override
+  Widget build(BuildContext context) {
+    // var counter = 100;
+    // Timer.periodic(const Duration(seconds: 2), (timer) {
+    //   foosh();
+
+    //   counter--;
+    //   if (counter == 0) {
+    //     print('Cancel timer');
+    //     timer.cancel();
+    //   }
+    // });
+
+    return Expanded(
+      child: Center(
+          child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          // short description capure
+          Padding(
+              padding: const EdgeInsets.all(5),
+              child: FilledButton(
+                  onPressed: () async {
+                    // TODO: see alternatives to !
+                    shortDescription =
+                        (await Clipboard.getData("text/plain"))!.text!;
+                  },
+                  child: Padding(
+                    padding: const EdgeInsets.all(10),
+                    child: Row(
+                      children: const [
+                        Icon(FluentIcons.paste_as_text),
+                        Text("Short Desc.,")
+                      ],
+                    ),
+                  ))),
+          // full description capture
+          Padding(
+              padding: const EdgeInsets.all(5),
+              child: FilledButton(
+                  onPressed: () async {
+                    // TODO: see alternatives to !
+                    fullDescription =
+                        (await Clipboard.getData("text/plain"))!.text!;
+                  },
+                  child: Padding(
+                    padding: const EdgeInsets.all(10),
+                    child: Row(
+                      children: const [
+                        Icon(FluentIcons.paste_as_text),
+                        Text("Full Desc.,")
+                      ],
+                    ),
+                  ))),
+          // ticket history capture
+          Padding(
+              padding: const EdgeInsets.all(5),
+              child: FilledButton(
+                  onPressed: () async {
+                    // TODO: see alternatives to !
+                    ticketHistory =
+                        (await Clipboard.getData("text/plain"))!.text!;
+                  },
+                  child: Padding(
+                    padding: const EdgeInsets.all(10),
+                    child: Row(
+                      children: const [
+                        Icon(FluentIcons.paste_as_text),
+                        Text("Ticket History")
+                      ],
+                    ),
+                  ))),
+        ],
+      )),
     );
   }
 }
@@ -65,7 +167,7 @@ class IncidentSearchBar extends StatelessWidget {
               child: TextBox(
             placeholder: 'search ticket or description',
             placeholderStyle: TextStyle(color: Colors.grey[120]),
-            onSubmitted: (x) async {
+            onChanged: (x) async {
               // process search query.
               // currently only supports searching incidents.
 
@@ -108,6 +210,7 @@ class IncidentSearchBar extends StatelessWidget {
   }
 
   _fetchAllIncidentsOverview() async {
+    // TODO: cache the search. with override flag.
     var documentsDirectory = await getApplicationDocumentsDirectory();
     var incidentsIndexPath =
         p.join(documentsDirectory.path, 'fastim', 'incidents', 'index.json');
