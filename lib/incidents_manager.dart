@@ -408,7 +408,7 @@ class IncidentTileFields extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    var incident = Provider.of<IncidentModel>(context, listen: false);
+    var incident = Provider.of<IncidentModel>(context, listen: true);
 
     return Row(
       mainAxisAlignment: MainAxisAlignment.start,
