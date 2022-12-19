@@ -2,6 +2,8 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:fastim/utils/fs.dart';
+import 'package:fastim/utils/save_load.dart';
 import 'package:fluent_ui/fluent_ui.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
@@ -30,10 +32,11 @@ class IncidentsManager extends StatelessWidget {
               Consumer<SearchControllerModel>(
                 builder: (context, searchController, child) {
                   if (searchController.searchResults.isEmpty) {
-                    return NewIncidentForm('imgtest');
+                    return NewIncidentForm(searchController.searchQuery);
+                  } else {
+                    return IncidentSearchResults(
+                        incidents: searchController.searchResults);
                   }
-                  return IncidentSearchResults(
-                      incidents: searchController.searchResults);
                 },
               )
             ]);
@@ -42,6 +45,9 @@ class IncidentsManager extends StatelessWidget {
   }
 }
 
+// TODO: holding control on text fields inside this widget.
+// seems to cause some flutter error (not just here but everywhere i can see so far)
+// keep an eye on this.
 class NewIncidentForm extends StatefulWidget {
   final String incidentNo;
   const NewIncidentForm(this.incidentNo, {super.key});
@@ -51,94 +57,151 @@ class NewIncidentForm extends StatefulWidget {
 }
 
 class _NewIncidentFormState extends State<NewIncidentForm> {
-  String shortDescription = "";
-  String fullDescription = "";
-  String ticketHistory = "";
+  // TODO: improve this spagetti mess.
+  var controllers = [
+    TextEditingController(),
+    TextEditingController(),
+    TextEditingController()
+  ];
 
-  // void foosh() async {
-  //   print((await Clipboard.getData("text/plain"))!.text!);
-  // }
+  var focusNodes = [
+    FocusNode(),
+    FocusNode(),
+    FocusNode(),
+  ];
+
+  String lastClip = "";
 
   @override
   Widget build(BuildContext context) {
-    // var counter = 100;
-    // Timer.periodic(const Duration(seconds: 2), (timer) {
-    //   foosh();
+    var co = context;
 
-    //   counter--;
-    //   if (counter == 0) {
-    //     print('Cancel timer');
-    //     timer.cancel();
-    //   }
-    // });
+    // capture clipboard every 500ms
+    Timer.periodic(const Duration(milliseconds: 500), (timer) async {
+      String text = (await Clipboard.getData("text/plain"))!.text!;
+
+      // this prevents triggering the autopaste.
+      if (lastClip == "") lastClip = text;
+
+      // see who has focus
+      var whoHasFocus = -1;
+      for (var i = 0; i < focusNodes.length; i++) {
+        if (focusNodes[i].hasFocus) {
+          whoHasFocus = i;
+        }
+      }
+
+      // if clipboard is fresh and focus is among these fields
+      if (lastClip != text &&
+          whoHasFocus < focusNodes.length &&
+          whoHasFocus >= 0) {
+        // update the focused field's text.
+        controllers[whoHasFocus].text = text;
+        // request focus for next item.
+        if (++whoHasFocus < focusNodes.length) {
+          // TODO: need a workaround
+          FocusScope.of(co).requestFocus(focusNodes[whoHasFocus]);
+        }
+        lastClip = text;
+      }
+
+      // cancel timer when all are filled.
+    });
 
     return Expanded(
-      child: Center(
-          child: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          // short description capure
-          Padding(
-              padding: const EdgeInsets.all(5),
-              child: FilledButton(
-                  onPressed: () async {
-                    // TODO: see alternatives to !
-                    shortDescription =
-                        (await Clipboard.getData("text/plain"))!.text!;
-                  },
-                  child: Padding(
-                    padding: const EdgeInsets.all(10),
-                    child: Row(
-                      children: const [
-                        Icon(FluentIcons.paste_as_text),
-                        Text("Short Desc.,")
-                      ],
-                    ),
-                  ))),
-          // full description capture
-          Padding(
-              padding: const EdgeInsets.all(5),
-              child: FilledButton(
-                  onPressed: () async {
-                    // TODO: see alternatives to !
-                    fullDescription =
-                        (await Clipboard.getData("text/plain"))!.text!;
-                  },
-                  child: Padding(
-                    padding: const EdgeInsets.all(10),
-                    child: Row(
-                      children: const [
-                        Icon(FluentIcons.paste_as_text),
-                        Text("Full Desc.,")
-                      ],
-                    ),
-                  ))),
-          // ticket history capture
-          Padding(
-              padding: const EdgeInsets.all(5),
-              child: FilledButton(
-                  onPressed: () async {
-                    // TODO: see alternatives to !
-                    ticketHistory =
-                        (await Clipboard.getData("text/plain"))!.text!;
-                  },
-                  child: Padding(
-                    padding: const EdgeInsets.all(10),
-                    child: Row(
-                      children: const [
-                        Icon(FluentIcons.paste_as_text),
-                        Text("Ticket History")
-                      ],
-                    ),
-                  ))),
-        ],
-      )),
+      child: Padding(
+        padding: const EdgeInsets.only(left: 100, right: 100),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            PasteField(controllers[0], focusNodes[0], 2),
+            PasteField(controllers[1], focusNodes[1], 4),
+            PasteField(controllers[2], focusNodes[2], 8),
+            Padding(
+              padding: const EdgeInsets.all(8.0),
+              child: Button(
+                  child: const Padding(
+                    padding: EdgeInsets.all(8.0),
+                    child: Text("Create"),
+                  ),
+                  onPressed: () {
+                    var shortDescription = controllers[0].text;
+                    var fullDescription = controllers[1].text;
+                    var incidentHistory = controllers[2].text;
+
+                    createIncident(widget.incidentNo, shortDescription,
+                        fullDescription, incidentHistory);
+                  }),
+            )
+          ],
+        ),
+      ),
+    );
+  }
+
+  // persists the new incident to disk.
+  createIncident(String incidentNo, String shortDescription,
+      String fullDescription, String incidentHistory) async {
+    // create a new directory for saving new incident data
+    var incidentDirectoryPath = await createIncidentDirectory(incidentNo);
+
+    // add incident to index.
+    var data = (await loadObj(await getIncidentsIndexPath())) as List<dynamic>;
+    data.add({
+      "incidentNo": incidentNo,
+      "shortDescription": shortDescription,
+      "archived": false,
+    });
+    await saveObj(await getIncidentsIndexPath(), data);
+
+    // create and populate incident folder
+    var incidentDetailsJsonPath = await createIncidentDetailsJson(incidentNo);
+
+    var newData = {
+      "incidentNo": incidentNo,
+      "shortDescription": shortDescription,
+      "fullDescription": fullDescription,
+      "incidentHistory": incidentHistory,
+      "srNo": "",
+      "incidentStatus": "",
+      "activityList": []
+    };
+
+    saveObj(incidentDetailsJsonPath, newData);
+  }
+}
+
+class PasteField extends StatelessWidget {
+  final TextEditingController controller;
+  final FocusNode focusNode;
+  final int minMaxLines;
+
+  const PasteField(
+    this.controller,
+    this.focusNode,
+    this.minMaxLines, {
+    Key? key,
+  }) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    var tb = TextBox(
+      controller: controller,
+      minLines: minMaxLines,
+      maxLines: minMaxLines,
+      focusNode: focusNode,
+    );
+
+    return Padding(
+      padding: const EdgeInsets.all(8.0),
+      child: tb,
     );
   }
 }
 
 class SearchControllerModel extends ChangeNotifier {
   List<IncidentOverviewModel> _searchResults = const [];
+  String searchQuery = "";
 
   List<IncidentOverviewModel> get searchResults => _searchResults;
 
@@ -167,9 +230,10 @@ class IncidentSearchBar extends StatelessWidget {
               child: TextBox(
             placeholder: 'search ticket or description',
             placeholderStyle: TextStyle(color: Colors.grey[120]),
-            onChanged: (x) async {
+            // TODO: extract function
+            onChanged: (searchQuery) async {
               // process search query.
-              // currently only supports searching incidents.
+              // currently only supports searching incidents via no and short desc.
 
               List<IncidentOverviewModel> results = [];
 
@@ -180,10 +244,11 @@ class IncidentSearchBar extends StatelessWidget {
                   await _fetchAllIncidentsOverview();
 
               for (var incidentOverview in incidentOverviews) {
-                if (incidentOverview["ticketNo"].contains(x) ||
-                    incidentOverview["shortDescription"].contains(x)) {
+                if (incidentOverview["incidentNo"].contains(searchQuery) ||
+                    incidentOverview["shortDescription"]
+                        .contains(searchQuery)) {
                   var incidentOverviewModel = IncidentOverviewModel(
-                      no: incidentOverview["ticketNo"],
+                      no: incidentOverview["incidentNo"],
                       shortDescription: incidentOverview["shortDescription"],
                       archived: incidentOverview["archived"]);
                   results.add(incidentOverviewModel);
@@ -191,6 +256,7 @@ class IncidentSearchBar extends StatelessWidget {
               }
 
               searchControllerModel.searchResults = results;
+              searchControllerModel.searchQuery = searchQuery;
             },
             style: const TextStyle(fontSize: 14),
           )),
@@ -233,7 +299,7 @@ class IncidentSearchResults extends StatelessWidget {
   Widget build(BuildContext context) {
     var children = incidents.map((incidentOverview) {
       return IncidentTile(
-        ticketNo: incidentOverview.no,
+        incidentNo: incidentOverview.no,
         shortDescription: incidentOverview.shortDescription,
       );
     }).toList();
@@ -260,10 +326,10 @@ class IncidentOverviewModel {
 }
 
 class IncidentTile extends StatelessWidget {
-  final String ticketNo;
+  final String incidentNo;
   final String shortDescription;
   const IncidentTile(
-      {Key? key, required this.ticketNo, this.shortDescription = ""})
+      {Key? key, required this.incidentNo, this.shortDescription = ""})
       : super(key: key);
 
   @override
@@ -276,9 +342,9 @@ class IncidentTile extends StatelessWidget {
           onStateChanged: (opened) async {
             if (opened) {
               // load incident tile data from disk.
-              var data = await _fetchIncidentFromDisk(ticketNo);
+              var data = await _fetchIncidentFromDisk(incidentNo);
               incident.srNo = data['srNo'];
-              incident.ticketStatus = data["ticketStatus"];
+              incident.incidentStatus = data["incidentStatus"];
               incident._activityList = data["activityList"].cast<String>();
               incident.ready = true;
             } else {
@@ -288,7 +354,7 @@ class IncidentTile extends StatelessWidget {
             }
           },
           // title and description of incident.
-          header: Text("$ticketNo $shortDescription"),
+          header: Text("$incidentNo $shortDescription"),
           // button to open the incident in full page for working.
           trailing: FilledButton(
             child: const Text('open'),
@@ -309,11 +375,11 @@ class IncidentTile extends StatelessWidget {
     );
   }
 
-  _fetchIncidentFromDisk(String ticketNo) async {
+  _fetchIncidentFromDisk(String incidentNo) async {
     var documentsDirectory = await getApplicationDocumentsDirectory();
     var documentsDirectoryPath = documentsDirectory.path;
     String detailsJsonpath = p.join(documentsDirectoryPath, 'fastim',
-        'incidents', ticketNo, 'details.json');
+        'incidents', incidentNo, 'details.json');
     var file = File(detailsJsonpath);
     // TODO: fails if file not found, need to handle this.
     var str = await file.readAsString();
@@ -324,11 +390,11 @@ class IncidentTile extends StatelessWidget {
     var documentDirectory = await getApplicationDocumentsDirectory();
     var documentsDirectoryPath = documentDirectory.path;
     var detailsJsonPath = p.join(documentsDirectoryPath, 'fastim', 'incidents',
-        ticketNo, 'details.json');
+        incidentNo, 'details.json');
     var file = File(detailsJsonPath);
     dynamic data = {};
     data['srNo'] = incident.srNo;
-    data["ticketStatus"] = incident.ticketStatus;
+    data["incidentStatus"] = incident.incidentStatus;
     data["activityList"] = incident._activityList;
     var encodedData = jsonEncode(data);
     await file.writeAsString(encodedData);
@@ -383,10 +449,10 @@ class IncidentTileFields extends StatelessWidget {
                 ComboBoxItem(value: 'customer', child: Text('WIP/Customer')),
                 ComboBoxItem(value: 'target', child: Text('WIP/Target')),
               ],
-              value: incident.ticketStatus,
+              value: incident.incidentStatus,
               onChanged: (value) {
                 if (value != null) {
-                  incident.ticketStatus = value;
+                  incident.incidentStatus = value;
                 }
               }),
         )
@@ -398,7 +464,7 @@ class IncidentTileFields extends StatelessWidget {
 // represents the entire state of an incident tile.
 class IncidentModel extends ChangeNotifier {
   String _srNo = "";
-  String _ticketStatus = "other";
+  String _incidentStatus = "other";
   bool _ready = false;
   List<String> _activityList = [];
 
@@ -416,10 +482,10 @@ class IncidentModel extends ChangeNotifier {
     notifyListeners();
   }
 
-  String get ticketStatus => _ticketStatus;
+  String get incidentStatus => _incidentStatus;
 
-  set ticketStatus(String ticketStatus) {
-    _ticketStatus = ticketStatus;
+  set incidentStatus(String incidentStatus) {
+    _incidentStatus = incidentStatus;
     notifyListeners();
   }
 
