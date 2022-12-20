@@ -3,6 +3,7 @@
 
 import 'package:fastim/incidents_manager.dart';
 import 'package:fluent_ui/fluent_ui.dart';
+import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
 class ActivityBoard extends StatefulWidget {
@@ -29,10 +30,15 @@ class _ActivityBoardState extends State<ActivityBoard> {
             controller: _controller,
             onSubmitted: (newActivity) {
               _controller.clear();
+
+              final now = DateTime.now();
+              final DateFormat formatter = DateFormat('H:m MMM dd |');
+              final String formattedDate = formatter.format(now);
+
               setState(() {
                 Provider.of<IncidentModel>(context, listen: false)
                     .activityList
-                    .add(newActivity);
+                    .add("$formattedDate $newActivity");
               });
             },
             foregroundDecoration: const BoxDecoration(
@@ -46,17 +52,18 @@ class _ActivityBoardState extends State<ActivityBoard> {
         builder: (context, incident, child) {
           return Column(
             crossAxisAlignment: CrossAxisAlignment.start,
-            children: incident.activityList
+            children: incident.activityList.reversed
                 .map((activity) => Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         const Padding(
                           padding: EdgeInsets.only(right: 10),
                           child: Icon(
-                            FluentIcons.circle_ring,
+                            FluentIcons.circle_fill,
                             size: 8,
                           ),
                         ),
-                        Text(activity),
+                        Expanded(child: Text(activity)),
                       ],
                     ))
                 .toList(),

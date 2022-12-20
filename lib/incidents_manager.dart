@@ -147,16 +147,16 @@ class _NewIncidentFormState extends State<NewIncidentForm> {
     // create a new directory for saving new incident data
 
     // add incident to index.
-    var data = (await loadObj(await getIncidentsIndexPath())) as List<dynamic>;
+    var data = (await loadObj(await getIncidentsIndexFile())) as List<dynamic>;
     data.add({
       "incidentNo": incidentNo,
       "shortDescription": shortDescription,
       "archived": false,
     });
-    await saveObj(await getIncidentsIndexPath(), data);
+    await saveObj(await getIncidentsIndexFile(), data);
 
-    // create and populate incident folder
-    var incidentDetailsJsonPath = await createIncidentDetailsJson(incidentNo);
+    // create and populate incident details.json
+    var incidentDetailsFile = await createIncidentDetailsFile(incidentNo);
 
     var newData = {
       "incidentNo": incidentNo,
@@ -168,7 +168,19 @@ class _NewIncidentFormState extends State<NewIncidentForm> {
       "activityList": []
     };
 
-    saveObj(incidentDetailsJsonPath, newData);
+    await saveObj(incidentDetailsFile, newData);
+
+    // create details.txt
+    var detailsTxtPath =
+        p.join((await getIncidentDirectory(incidentNo)).path, 'details.txt');
+
+    var str = "$incidentNo\n\n###########\n\n"
+        "$shortDescription\n\n###########\n\n"
+        "$fullDescription\n\n###########\n\n"
+        "$incidentHistory";
+
+    var file = await File(detailsTxtPath).create();
+    await file.writeAsString(str);
   }
 }
 
@@ -202,12 +214,12 @@ class PasteField extends StatelessWidget {
 }
 
 class SearchControllerModel extends ChangeNotifier {
-  List<IncidentOverviewModel> _searchResults = const [];
+  List<IndexEntryModel> _searchResults = const [];
   String searchQuery = "";
 
-  List<IncidentOverviewModel> get searchResults => _searchResults;
+  List<IndexEntryModel> get searchResults => _searchResults;
 
-  set searchResults(List<IncidentOverviewModel> searchResults) {
+  set searchResults(List<IndexEntryModel> searchResults) {
     _searchResults = searchResults;
     notifyListeners();
   }
@@ -237,23 +249,21 @@ class IncidentSearchBar extends StatelessWidget {
               // process search query.
               // currently only supports searching incidents via no and short desc.
 
-              List<IncidentOverviewModel> results = [];
+              List<IndexEntryModel> results = [];
 
               var searchControllerModel =
                   Provider.of<SearchControllerModel>(context, listen: false);
 
-              List<dynamic> incidentOverviews =
-                  await _fetchAllIncidentsOverview();
+              List<dynamic> indexEntries = await _fetchIncidentsIndex();
 
-              for (var incidentOverview in incidentOverviews) {
-                if (incidentOverview["incidentNo"].contains(searchQuery) ||
-                    incidentOverview["shortDescription"]
-                        .contains(searchQuery)) {
-                  var incidentOverviewModel = IncidentOverviewModel(
-                      incidentNo: incidentOverview["incidentNo"],
-                      shortDescription: incidentOverview["shortDescription"],
-                      archived: incidentOverview["archived"]);
-                  results.add(incidentOverviewModel);
+              for (var indexEntry in indexEntries) {
+                if (indexEntry["incidentNo"].contains(searchQuery) ||
+                    indexEntry["shortDescription"].contains(searchQuery)) {
+                  var indexEntryModel = IndexEntryModel(
+                      incidentNo: indexEntry["incidentNo"],
+                      shortDescription: indexEntry["shortDescription"],
+                      archived: indexEntry["archived"]);
+                  results.add(indexEntryModel);
                 }
               }
 
@@ -277,7 +287,7 @@ class IncidentSearchBar extends StatelessWidget {
     );
   }
 
-  _fetchAllIncidentsOverview() async {
+  _fetchIncidentsIndex() async {
     // TODO: cache the search. with override flag.
     var documentsDirectory = await getApplicationDocumentsDirectory();
     var incidentsIndexPath =
@@ -290,19 +300,19 @@ class IncidentSearchBar extends StatelessWidget {
 
 /// Displays the list of results that match the search term in search bar
 class IncidentSearchResults extends StatelessWidget {
-  final List<IncidentOverviewModel> incidents;
+  final List<IndexEntryModel> incidentsIndex;
 
   const IncidentSearchResults(
-    this.incidents, {
+    this.incidentsIndex, {
     Key? key,
   }) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
-    var children = incidents.map((incidentOverview) {
+    var children = incidentsIndex.map((indexEntry) {
       return IncidentTile(
-        incidentNo: incidentOverview.incidentNo,
-        shortDescription: incidentOverview.shortDescription,
+        incidentNo: indexEntry.incidentNo,
+        shortDescription: indexEntry.shortDescription,
       );
     }).toList();
 
@@ -317,12 +327,12 @@ class IncidentSearchResults extends StatelessWidget {
 }
 
 /// Incident Overview as stored in the index.
-class IncidentOverviewModel {
+class IndexEntryModel {
   String incidentNo;
   String shortDescription;
   bool archived;
 
-  IncidentOverviewModel(
+  IndexEntryModel(
       {required this.incidentNo,
       required this.shortDescription,
       required this.archived});
@@ -353,7 +363,7 @@ class IncidentTile extends StatelessWidget {
             } else {
               // persist state to the disk.
               incident.ready = false;
-              _saveIncidentToDisk(incident);
+              _updateIncidentOnDisk(incident);
             }
           },
           // title and description of incident.
@@ -379,28 +389,17 @@ class IncidentTile extends StatelessWidget {
   }
 
   _fetchIncidentFromDisk(String incidentNo) async {
-    var documentsDirectory = await getApplicationDocumentsDirectory();
-    var documentsDirectoryPath = documentsDirectory.path;
-    String detailsJsonpath = p.join(documentsDirectoryPath, 'fastim',
-        'incidents', incidentNo, 'details.json');
-    var file = File(detailsJsonpath);
-    // TODO: fails if file not found, need to handle this.
-    var str = await file.readAsString();
-    return json.decode(str);
+    var incidentDetailsFile = await getIncidentDetailsFile(incidentNo);
+    return loadObj(incidentDetailsFile);
   }
 
-  _saveIncidentToDisk(IncidentModel incident) async {
-    var documentDirectory = await getApplicationDocumentsDirectory();
-    var documentsDirectoryPath = documentDirectory.path;
-    var detailsJsonPath = p.join(documentsDirectoryPath, 'fastim', 'incidents',
-        incidentNo, 'details.json');
-    var file = File(detailsJsonPath);
-    dynamic data = {};
+  _updateIncidentOnDisk(IncidentModel incident) async {
+    var incidentDetailsFile = await getIncidentDetailsFile(incidentNo);
+    var data = await loadObj(incidentDetailsFile);
     data['srNo'] = incident.srNo;
-    data["incidentStatus"] = incident.incidentStatus;
-    data["activityList"] = incident._activityList;
-    var encodedData = jsonEncode(data);
-    await file.writeAsString(encodedData);
+    data['incidentStatus'] = incident.incidentStatus;
+    data['activityList'] = incident.activityList;
+    await saveObj(incidentDetailsFile, data);
   }
 }
 
