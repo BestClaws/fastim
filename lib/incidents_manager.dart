@@ -28,11 +28,17 @@ class IncidentsManager extends StatelessWidget {
               const IncidentSearchBar(),
               Consumer<SearchControllerModel>(
                 builder: (context, searchController, child) {
+                  // populate entries if search was reset.
+                  if (searchController.textController.text == "") {
+                    searchController.searchAndPopulate("");
+                  }
+
                   // decide wether to show new incident form or
                   // show search results.
                   if (searchController.searchResults.isEmpty) {
                     // create new incident.
-                    return NewIncidentForm(searchController.searchQuery);
+                    return NewIncidentForm(
+                        searchController.textController.text);
                   } else {
                     // show results.
                     return IncidentSearchResults(
@@ -133,6 +139,10 @@ class _NewIncidentFormState extends State<NewIncidentForm> {
                         shortDescriptionField.controller.text,
                         fullDescriptionField.controller.text,
                         incidentHistoryField.controller.text);
+                    var searchController = Provider.of<SearchControllerModel>(
+                        context,
+                        listen: false);
+                    searchController.resetSearch();
                   }),
             )
           ],
@@ -215,13 +225,48 @@ class PasteField extends StatelessWidget {
 
 class SearchControllerModel extends ChangeNotifier {
   List<IndexEntryModel> _searchResults = const [];
-  String searchQuery = "";
+  final _textController = TextEditingController();
+
+  TextEditingController get textController => _textController;
+
+  resetSearch() {
+    _textController.text = "";
+    notifyListeners();
+  }
 
   List<IndexEntryModel> get searchResults => _searchResults;
 
   set searchResults(List<IndexEntryModel> searchResults) {
     _searchResults = searchResults;
     notifyListeners();
+  }
+
+  searchAndPopulate(searchQuery) async {
+    List<IndexEntryModel> results = [];
+
+    List<dynamic> indexEntries = await _fetchIncidentsIndex();
+
+    for (var indexEntry in indexEntries) {
+      if (indexEntry["incidentNo"].contains(searchQuery) ||
+          indexEntry["shortDescription"].contains(searchQuery)) {
+        var indexEntryModel = IndexEntryModel(
+            incidentNo: indexEntry["incidentNo"],
+            shortDescription: indexEntry["shortDescription"],
+            archived: indexEntry["archived"]);
+        results.add(indexEntryModel);
+      }
+    }
+    searchResults = results;
+  }
+
+  _fetchIncidentsIndex() async {
+    // TODO: cache the search. with override flag.
+    var documentsDirectory = await getApplicationDocumentsDirectory();
+    var incidentsIndexPath =
+        p.join(documentsDirectory.path, 'fastim', 'incidents', 'index.json');
+    var file = File(incidentsIndexPath);
+    var str = await file.readAsString();
+    return json.decode(str);
   }
 }
 
@@ -233,6 +278,9 @@ class IncidentSearchBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    var searchControllerModel =
+        Provider.of<SearchControllerModel>(context, listen: false);
+
     return Container(
       color: Colors.grey[190],
       padding: const EdgeInsets.all(15),
@@ -242,33 +290,14 @@ class IncidentSearchBar extends StatelessWidget {
           // TODO: prefer to make this flexible
           Expanded(
               child: TextBox(
+            controller: searchControllerModel.textController,
             placeholder: 'search ticket or description',
             placeholderStyle: TextStyle(color: Colors.grey[120]),
             // TODO: extract function
+            // process search query.
+            // currently only supports searching incidents via no and short desc.
             onChanged: (searchQuery) async {
-              // process search query.
-              // currently only supports searching incidents via no and short desc.
-
-              List<IndexEntryModel> results = [];
-
-              var searchControllerModel =
-                  Provider.of<SearchControllerModel>(context, listen: false);
-
-              List<dynamic> indexEntries = await _fetchIncidentsIndex();
-
-              for (var indexEntry in indexEntries) {
-                if (indexEntry["incidentNo"].contains(searchQuery) ||
-                    indexEntry["shortDescription"].contains(searchQuery)) {
-                  var indexEntryModel = IndexEntryModel(
-                      incidentNo: indexEntry["incidentNo"],
-                      shortDescription: indexEntry["shortDescription"],
-                      archived: indexEntry["archived"]);
-                  results.add(indexEntryModel);
-                }
-              }
-
-              searchControllerModel.searchResults = results;
-              searchControllerModel.searchQuery = searchQuery;
+              searchControllerModel.searchAndPopulate(searchQuery);
             },
             style: const TextStyle(fontSize: 14),
           )),
@@ -285,16 +314,6 @@ class IncidentSearchBar extends StatelessWidget {
         ],
       ),
     );
-  }
-
-  _fetchIncidentsIndex() async {
-    // TODO: cache the search. with override flag.
-    var documentsDirectory = await getApplicationDocumentsDirectory();
-    var incidentsIndexPath =
-        p.join(documentsDirectory.path, 'fastim', 'incidents', 'index.json');
-    var file = File(incidentsIndexPath);
-    var str = await file.readAsString();
-    return json.decode(str);
   }
 }
 
