@@ -46,6 +46,7 @@ class IncidentsManager extends StatelessWidget {
   }
 }
 
+// TODO: make sure its text before dealing with clipboard.
 // TODO: holding control on text fields inside this widget.
 // seems to cause some flutter error (not just here but everywhere i can see so far)
 // keep an eye on this.
@@ -59,19 +60,12 @@ class NewIncidentForm extends StatefulWidget {
 
 class _NewIncidentFormState extends State<NewIncidentForm> {
   // TODO: improve this spagetti mess.
-  var controllers = [
-    TextEditingController(),
-    TextEditingController(),
-    TextEditingController()
-  ];
-
-  var focusNodes = [
-    FocusNode(),
-    FocusNode(),
-    FocusNode(),
-  ];
 
   String lastClip = "";
+  var shortDescriptionField = PasteField(2, "Give a short description...");
+  var fullDescriptionField = PasteField(4, "Give a full description...");
+  var incidentHistoryField =
+      PasteField(7, "Give the incidient history so far...");
 
   @override
   Widget build(BuildContext context) {
@@ -85,24 +79,34 @@ class _NewIncidentFormState extends State<NewIncidentForm> {
       if (lastClip == "") lastClip = text;
 
       // see who has focus
-      var whoHasFocus = -1;
-      for (var i = 0; i < focusNodes.length; i++) {
-        if (focusNodes[i].hasFocus) {
-          whoHasFocus = i;
-        }
+      PasteField? whoHasFocus;
+
+      if (shortDescriptionField.focusNode.hasFocus) {
+        whoHasFocus = shortDescriptionField;
+      } else if (fullDescriptionField.focusNode.hasFocus) {
+        whoHasFocus = fullDescriptionField;
+      } else if (incidentHistoryField.focusNode.hasFocus) {
+        whoHasFocus = incidentHistoryField;
       }
 
-      // if clipboard is fresh and focus is among these fields
-      if (lastClip != text &&
-          whoHasFocus < focusNodes.length &&
-          whoHasFocus >= 0) {
+      // if clipboard is fresh and either of three fields have focus.
+      if (lastClip != text && whoHasFocus != null) {
         // update the focused field's text.
-        controllers[whoHasFocus].text = text;
+        whoHasFocus.controller.text = text;
+
         // request focus for next item.
-        if (++whoHasFocus < focusNodes.length) {
-          // TODO: need a workaround
-          FocusScope.of(co).requestFocus(focusNodes[whoHasFocus]);
+        PasteField? nextFocus;
+
+        if (shortDescriptionField.focusNode.hasFocus) {
+          nextFocus = fullDescriptionField;
+        } else if (fullDescriptionField.focusNode.hasFocus) {
+          nextFocus = incidentHistoryField;
         }
+
+        if (nextFocus != null) {
+          FocusScope.of(co).requestFocus(nextFocus.focusNode);
+        }
+
         lastClip = text;
       }
 
@@ -115,9 +119,9 @@ class _NewIncidentFormState extends State<NewIncidentForm> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            PasteField(controllers[0], focusNodes[0], 2),
-            PasteField(controllers[1], focusNodes[1], 4),
-            PasteField(controllers[2], focusNodes[2], 8),
+            shortDescriptionField,
+            fullDescriptionField,
+            incidentHistoryField,
             Padding(
               padding: const EdgeInsets.all(8.0),
               child: Button(
@@ -126,12 +130,11 @@ class _NewIncidentFormState extends State<NewIncidentForm> {
                     child: Text("Create"),
                   ),
                   onPressed: () {
-                    var shortDescription = controllers[0].text;
-                    var fullDescription = controllers[1].text;
-                    var incidentHistory = controllers[2].text;
-
-                    createIncident(widget.incidentNo, shortDescription,
-                        fullDescription, incidentHistory);
+                    createIncident(
+                        widget.incidentNo,
+                        shortDescriptionField.controller.text,
+                        fullDescriptionField.controller.text,
+                        incidentHistoryField.controller.text);
                   }),
             )
           ],
@@ -173,14 +176,14 @@ class _NewIncidentFormState extends State<NewIncidentForm> {
 }
 
 class PasteField extends StatelessWidget {
-  final TextEditingController controller;
-  final FocusNode focusNode;
   final int minMaxLines;
+  final String placeholder;
+  final controller = TextEditingController();
+  final focusNode = FocusNode();
 
-  const PasteField(
-    this.controller,
-    this.focusNode,
-    this.minMaxLines, {
+  PasteField(
+    this.minMaxLines,
+    this.placeholder, {
     Key? key,
   }) : super(key: key);
 
@@ -191,6 +194,7 @@ class PasteField extends StatelessWidget {
       minLines: minMaxLines,
       maxLines: minMaxLines,
       focusNode: focusNode,
+      placeholder: placeholder,
     );
 
     return Padding(
