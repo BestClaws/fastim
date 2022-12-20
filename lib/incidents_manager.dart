@@ -26,16 +26,17 @@ class IncidentsManager extends StatelessWidget {
             children: [
               // for search bar and buttons
               const IncidentSearchBar(),
-              // create new incident.
-
-              // for results list view
               Consumer<SearchControllerModel>(
                 builder: (context, searchController, child) {
+                  // decide wether to show new incident form or
+                  // show search results.
                   if (searchController.searchResults.isEmpty) {
+                    // create new incident.
                     return NewIncidentForm(searchController.searchQuery);
                   } else {
+                    // show results.
                     return IncidentSearchResults(
-                        incidents: searchController.searchResults);
+                        searchController.searchResults);
                   }
                 },
               )
@@ -248,7 +249,7 @@ class IncidentSearchBar extends StatelessWidget {
                     incidentOverview["shortDescription"]
                         .contains(searchQuery)) {
                   var incidentOverviewModel = IncidentOverviewModel(
-                      no: incidentOverview["incidentNo"],
+                      incidentNo: incidentOverview["incidentNo"],
                       shortDescription: incidentOverview["shortDescription"],
                       archived: incidentOverview["archived"]);
                   results.add(incidentOverviewModel);
@@ -290,8 +291,8 @@ class IncidentSearchBar extends StatelessWidget {
 class IncidentSearchResults extends StatelessWidget {
   final List<IncidentOverviewModel> incidents;
 
-  const IncidentSearchResults({
-    required this.incidents,
+  const IncidentSearchResults(
+    this.incidents, {
     Key? key,
   }) : super(key: key);
 
@@ -299,7 +300,7 @@ class IncidentSearchResults extends StatelessWidget {
   Widget build(BuildContext context) {
     var children = incidents.map((incidentOverview) {
       return IncidentTile(
-        incidentNo: incidentOverview.no,
+        incidentNo: incidentOverview.incidentNo,
         shortDescription: incidentOverview.shortDescription,
       );
     }).toList();
@@ -307,20 +308,21 @@ class IncidentSearchResults extends StatelessWidget {
     return Expanded(
       child: ListView(
         padding:
-            const EdgeInsets.only(left: 100, right: 100, top: 20, bottom: 20),
+            const EdgeInsets.only(left: 80, right: 80, top: 20, bottom: 20),
         children: children,
       ),
     );
   }
 }
 
+/// Incident Overview as stored in the index.
 class IncidentOverviewModel {
-  String no;
+  String incidentNo;
   String shortDescription;
   bool archived;
 
   IncidentOverviewModel(
-      {required this.no,
+      {required this.incidentNo,
       required this.shortDescription,
       required this.archived});
 }
@@ -345,7 +347,7 @@ class IncidentTile extends StatelessWidget {
               var data = await _fetchIncidentFromDisk(incidentNo);
               incident.srNo = data['srNo'];
               incident.incidentStatus = data["incidentStatus"];
-              incident._activityList = data["activityList"].cast<String>();
+              incident.activityList = data["activityList"].cast<String>();
               incident.ready = true;
             } else {
               // persist state to the disk.
@@ -490,6 +492,11 @@ class IncidentModel extends ChangeNotifier {
   }
 
   List<String> get activityList => _activityList;
+
+  set activityList(List<String> activities) {
+    _activityList = activities;
+    notifyListeners();
+  }
 
   void addActivity(String activity) {
     _activityList.add(activity);
