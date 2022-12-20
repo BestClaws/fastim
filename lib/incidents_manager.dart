@@ -9,6 +9,7 @@ import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as p;
+import 'package:url_launcher/url_launcher.dart';
 
 import 'activity_board.dart';
 
@@ -390,7 +391,10 @@ class IncidentTile extends StatelessWidget {
           // button to open the incident in full page for working.
           trailing: FilledButton(
             child: const Text('open'),
-            onPressed: () {},
+            onPressed: () async {
+              var dir = (await getIncidentDirectory(incidentNo)).path;
+              await launchUrl(Uri.directory(dir));
+            },
           ),
           content: Consumer<IncidentModel>(
             builder: (context, inci, child) {
