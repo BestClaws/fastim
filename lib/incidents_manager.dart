@@ -36,7 +36,8 @@ class IncidentsManager extends StatelessWidget {
 
                   // decide wether to show new incident form or
                   // show search results.
-                  if (searchController.searchResults.isEmpty) {
+                  if (searchController.searchResults.isEmpty &&
+                      searchController.textController.text != "") {
                     // create new incident.
                     return NewIncidentForm(
                         searchController.textController.text);
@@ -242,7 +243,7 @@ class SearchControllerModel extends ChangeNotifier {
     notifyListeners();
   }
 
-  searchAndPopulate(searchQuery) async {
+  Future<void> searchAndPopulate(searchQuery) async {
     List<IndexEntryModel> results = [];
 
     List<dynamic> indexEntries = await _fetchIncidentsIndex();
