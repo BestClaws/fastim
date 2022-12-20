@@ -59,8 +59,6 @@ class NewIncidentForm extends StatefulWidget {
 }
 
 class _NewIncidentFormState extends State<NewIncidentForm> {
-  // TODO: improve this spagetti mess.
-
   String lastClip = "";
   var shortDescriptionField = PasteField(2, "Give a short description...");
   var fullDescriptionField = PasteField(4, "Give a full description...");
@@ -147,7 +145,6 @@ class _NewIncidentFormState extends State<NewIncidentForm> {
   createIncident(String incidentNo, String shortDescription,
       String fullDescription, String incidentHistory) async {
     // create a new directory for saving new incident data
-    var incidentDirectoryPath = await createIncidentDirectory(incidentNo);
 
     // add incident to index.
     var data = (await loadObj(await getIncidentsIndexPath())) as List<dynamic>;
